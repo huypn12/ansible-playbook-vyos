@@ -1,0 +1,66 @@
+---
+- name: Homelab vyos router setup
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Configure remote vyos ourter
+      vyos.vyos.vyos_config:
+        lines:
+        # BEGIN
+          # Assume the following config were set in place
+          ## SSH connection
+          # - set service ssh port 22
+          # - set system login user vyos authentication public-keys identifier <pubkey>
+          # - set system login user vyos authentication public-keys identifier type ssh-ed25519
+          ## Disable vyos as ntp server
+          # - delete service ntp allow-client
+          ## LAN interface
+          # - set interfaces ethernet eth0 address 10.1.1.2/24
+          # - set interfaces ethernet eth0 description LAN
+          # - set protocols static route 0.0.0.0/0 next-hop 10.1.1.1
+          # Firewall rules on LAN interface
+          #     INPUT
+          - set firewall ipv4 input filter rule 10 inbound-interface name eth0
+          - set firewall ipv4 input filter default-action accept # trusted zone
+          - set firewall ipv4 input filter rule 10 action 'accept'
+          - set firewall ipv4 input filter rule 10 state 'established'
+          - set firewall ipv4 input filter rule 10 state 'related'
+          - set firewall ipv4 input filter rule 10 description 'Allow return traffic destined to the router'
+          #     OUTPUT
+          - set firewall ipv4 output filter default-action accept
+          #     FORWARD
+          - set firewall ipv4 forward filter rule 20 inbound-interface name eth0
+          - set firewall ipv4 forward filter default-action accept # both sides of the router are trusted
+          - set firewall ipv4 forward filter rule 20 action 'accept'
+          - set firewall ipv4 forward filter rule 20 state 'established'
+          - set firewall ipv4 forward filter rule 20 state 'related'
+          - set firewall ipv4 forward filter rule 20 description 'Allow forward traffic through the router'
+          - set firewall flowtable FT1 description 'Flow Table for the forward chain'
+          - set firewall flowtable FT1 interface 'eth0'
+          - set firewall flowtable FT1 offload 'software'
+          - set firewall ipv4 forward filter rule 10 action 'offload'
+          - set firewall ipv4 forward filter rule 10 description 'Allow Return traffic through the router - Fast Path'
+          - set firewall ipv4 forward filter rule 10 offload-target 'FT1'
+          - set firewall ipv4 forward filter rule 10 state 'established'
+          - set firewall ipv4 forward filter rule 10 state 'related'
+          ## HOMELAB interface
+          - set interfaces ethernet eth1 address 10.20.0.1/16
+          - set interfaces ethernet eth1 description 'Homelab connection'
+          # DHCP server on Homelab
+          - set service dhcp-server shared-network-name Homelab subnet 10.20.0.0/16 subnet-id 1
+          - set service dhcp-server shared-network-name Homelab subnet 10.20.0.0/16 option default-router '10.20.0.1'
+          - set service dhcp-server shared-network-name Homelab subnet 10.20.0.0/16 option name-server '10.20.0.1'
+          - set service dhcp-server shared-network-name Homelab subnet 10.20.0.0/16 range 0 start '10.20.1.10'
+          - set service dhcp-server shared-network-name Homelab subnet 10.20.0.0/16 range 0 stop '10.20.1.250'
+          # Firewall on homelab interface
+          #     INPUT
+          - set firewall ipv4 input filter rule 1000 action 'accept'
+          - set firewall ipv4 input filter rule 1000 description 'Allow all traffic from LAN interface'
+          - set firewall ipv4 input filter rule 1000 inbound-interface name 'eth1'
+          #     OUTPUT
+          - set firewall ipv4 forward filter rule 1000 action 'accept'
+          - set firewall ipv4 forward filter rule 1000 description 'Allow all traffic from LAN interface'
+          - set firewall ipv4 forward filter rule 1000 inbound-interface name 'eth1'
+          - set firewall flowtable FT1 interface eth1
+        # END
+        save: true
