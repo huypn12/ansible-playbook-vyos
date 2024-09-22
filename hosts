@@ -1,0 +1,7 @@
+all:
+    hosts:
+        vm-lnx-vyos:
+            ansible_host: 10.1.1.2
+            ansible_ssh_user: vyos
+            ansible_network_os: vyos
+            ansible_connection: network_cli
