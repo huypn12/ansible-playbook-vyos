@@ -62,5 +62,11 @@
           - set firewall ipv4 forward filter rule 1000 description 'Allow all traffic from LAN interface'
           - set firewall ipv4 forward filter rule 1000 inbound-interface name 'eth1'
           - set firewall flowtable FT1 interface eth1
-        # END
+          # NAT
+          - set nat source rule 10 description 'NAT source address for all traffic leaving eth0'
+          - set nat source rule 10 outbound-interface name 'eth0'
+          - set nat source rule 10 translation address 'masquerade'
+          - set nat source rule 10 destination address !10.1.1.0/24
+          - set nat source rule 10 source address 10.1.1.0/24
+          - set nat source rule 10 translation address 10.1.1.1
         save: true
